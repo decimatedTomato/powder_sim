@@ -23,6 +23,10 @@ unsigned int current_shader;
 int location_time;
 int location_resolution;
 
+int location_texture; // The values of the grid particles
+int location_color_count; // The number of colors in the color palette
+int location_colors; // The color palette
+
 // Windows
 GLFWwindow* window;
 int window_width, window_height;
@@ -74,11 +78,6 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
     printf("\n");
 }
 
-typedef struct ShaderProgramSource {
-    char* VertexSource;
-    char* FragmentSource;
-} ShaderProgramSource;
-
 char* readFile(const char* filepath) {
 	char* buffer = '\0';
 	long length;
@@ -97,22 +96,6 @@ char* readFile(const char* filepath) {
 	}
 
 	return buffer;
-}
-
-static ShaderProgramSource ParseShader(char* source) {
-    ShaderProgramSource ss;
-    char *p = source;
-    while((p = strstr(p, "#shader "))) {
-        *p = '\0';
-        p += 8;
-        if(strncmp("vertex", p, 6) == 0) ss.VertexSource = p + 7;
-        else if(strncmp("fragment", p, 8) == 0) ss.FragmentSource = p + 9;
-        else {
-            printf("Shader type not recognized :%s:", p);
-            exit(1);
-        }
-    }
-    return ss;
 }
 
 static unsigned int CompileShader(unsigned int type, const char* src) {
@@ -219,26 +202,34 @@ void init_Quad() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), square_indices, GL_STATIC_DRAW);
 }
 
-void init_Shader(char* shader_filepath) {
-    char* shader_contents = readFile(shader_filepath);
-    ShaderProgramSource source = ParseShader(shader_contents);
-    // printf("VERTEX SHADER\n%s\n", source.VertexSource);
-    // printf("FRAGMENT SHADER\n%s\n", source.FragmentSource);
-    current_shader = CreateShader(source.VertexSource, source.FragmentSource);
-    free(shader_contents);
+void init_Shader(char *vertex_filepath, char *fragment_filepath) {
+    char *vertex_shader = readFile(vertex_filepath);
+    char *fragment_shader = readFile(fragment_filepath);
+    current_shader = CreateShader(vertex_shader, fragment_shader);
+    free(vertex_shader);
+    free(fragment_shader);
     glUseProgram(current_shader);
 }
 
 void init_Uniforms() {
     location_time = glGetUniformLocation(current_shader, "u_time");
-    assert(location_time != -1);
+    // assert(location_time != -1);
     glUniform1f(location_time, glfwGetTime());    
 
     location_resolution = glGetUniformLocation(current_shader, "u_resolution");
-    assert(location_resolution != -1);
-    glfwGetWindowSize(window, &window_width, &window_height); //TODO Change to use callback function
+    // assert(location_resolution != -1);
+    glfwGetWindowSize(window, &window_width, &window_height);
     glViewport(0, 0, window_width, window_height);
     glUniform2f(location_resolution, window_width, window_height);
+
+    location_texture = glGetUniformLocation(current_shader, "u_texture");
+    assert(location_texture != -1);
+    glUniform1i(location_texture, 0);
+}
+
+void init_palette(int palette_size, int max_color_count, float *palette) {
+    glUniform1i(location_color_count, palette_size);
+    glUniform3fv(location_colors, max_color_count, palette);
 }
 
 void take_user_input() {
