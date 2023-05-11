@@ -1,2 +1,6 @@
 *.exe
 *.json
+
+# Images
+*.jpeg
+*.png
