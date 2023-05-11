@@ -1,12 +1,12 @@
-#version 330 core
+#version 330
 
-in vec4 gl_FragCoord;
-out vec4 fragColor;
+precision mediump float;
 
-uniform vec2 u_resolution;
-uniform float u_time;
 uniform sampler2D u_texture;
 
-void main() {
-    fragColor = texture2D(u_texture, v_texCoords) * v_color;;
-};
+in vec2 uv;
+out vec4 out_color;
+
+void main(void) {
+    out_color = texture(u_texture, uv);
+}

@@ -12,8 +12,10 @@
 #define MONITOR_WIDTH 1920
 #define MONITOR_HEIGHT 1080
 
+#include "simulation.h"
+
 // State (should not be in this file)
-bool fullscreen = false, just_pressed = false, just_refreshed = false;
+bool fullscreen = false, just_fullscreened = false, just_refreshed = false, just_paused = false, just_stepped = false;
 int prev_width, prev_height, prev_x, prev_y;
 
 // Shaders
@@ -177,11 +179,12 @@ void init_Debug_Callback() {
 }
 
 void init_Quad() {
-    float square_positions[] = {
-        -1.0f, -1.0f,
-         1.0f, -1.0f,
-         1.0f,  1.0f,
-        -1.0f,  1.0f
+    float square_attributes[] = {
+        // positions   texCoords
+        -1.0f, -1.0f,  0.0f, 0.0f, // 0
+         1.0f, -1.0f,  1.0f, 0.0f, // 1
+         1.0f,  1.0f,  1.0f, 1.0f, // 2
+        -1.0f,  1.0f,  0.0f, 1.0f  // 3
     };
     unsigned int square_indices[] = {
         0, 1, 2,
@@ -191,10 +194,14 @@ void init_Quad() {
     unsigned int square_buffer;
     glGenBuffers(1, &square_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, square_buffer);
-    glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), square_positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 2 * sizeof(float), square_attributes, GL_STATIC_DRAW);
 
+    // positions
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    // uvs
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
     unsigned int index_buffer_object;
     glGenBuffers(1, &index_buffer_object);
@@ -227,17 +234,12 @@ void init_Uniforms() {
     glUniform1i(location_texture, 0);
 }
 
-void init_palette(int palette_size, int max_color_count, float *palette) {
-    glUniform1i(location_color_count, palette_size);
-    glUniform3fv(location_colors, max_color_count, palette);
-}
-
 void take_user_input() {
     glfwPollEvents();
     if(glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-        if(!just_pressed) {
+        if(!just_fullscreened) {
             fullscreen = !fullscreen;
-            just_pressed = true;
+            just_fullscreened = true;
             if(fullscreen) {
                 prev_width = window_width;
                 prev_height = window_height;
@@ -247,22 +249,25 @@ void take_user_input() {
                 glfwSetWindowMonitor(window, NULL, prev_x, prev_y, prev_width, prev_height, GLFW_DONT_CARE);
             }
         }
-    } else just_pressed = false;
+    } else just_fullscreened = false;
     if(glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-        // Pause
-    }
+        if(!just_paused) {
+            pause();
+            just_paused = true;
+        }
+    } else just_paused = false;
+    if(glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
+        if(!just_stepped) {
+            step();
+            just_stepped = true;
+        }
+    } else just_stepped = false;
     if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         if(!just_refreshed) {
-            // restart();
+            restart();
             just_refreshed = true;
         }
     } else just_refreshed = false;
-    if(glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
-        // Previous frame
-    }
-    if(glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
-        // Next frame
-    }
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, 1);
     }

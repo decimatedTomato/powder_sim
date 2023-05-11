@@ -1,3 +1,5 @@
 #pragma once
 
-// void restart();
+void restart();
+void pause();
+void step();
