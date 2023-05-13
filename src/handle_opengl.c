@@ -16,7 +16,7 @@
 
 // State (should not be in this file)
 bool fullscreen = false;
-bool just_fullscreened = false, just_refreshed = false, just_paused = false, just_stepped = false, just_saved = false;
+bool just_fullscreened = false, just_loaded = false, just_paused = false, just_stepped = false, just_saved = false;
 int prev_width, prev_height, prev_x, prev_y;
 
 // Shaders
@@ -269,12 +269,12 @@ void take_user_input() {
             just_saved = true;
         }
     } else just_saved = false;
-    if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-        if(!just_refreshed) {
-            restart();
-            just_refreshed = true;
+    if(glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+        if(!just_loaded) {
+            load();
+            just_loaded = true;
         }
-    } else just_refreshed = false;
+    } else just_loaded = false;
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, 1);
     }

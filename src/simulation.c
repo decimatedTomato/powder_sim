@@ -156,8 +156,9 @@ void update() {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, particle_grid);
 }
 
-void restart() {
-    init_grid();
+void load() {
+    copy_grid((uint32_t*)particle_grid, (uint32_t*)particle_grid_saved);
+    render_frame();
 }
 
 void pause() {
