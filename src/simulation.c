@@ -25,12 +25,14 @@
 #define VERTEX_SHADER_FILE_PATH "res/shaders/vertex_old.glsl"
 #define SHADER_FILE_PATH "res/shaders/fragment_old.glsl"
 
+#define START_PAUSED true
+
 // DISPLAY
-typedef enum DisplayMode { // As of yet unused
-    PAUSED, RENDERING
+typedef enum DisplayMode {
+    PLAYING, PAUSED
 } DisplayMode;
 
-DisplayMode mode = RENDERING;
+DisplayMode mode = START_PAUSED;
 int window_width = DEFAULT_WINDOW_WIDTH;
 int window_height = DEFAULT_WINDOW_HEIGHT;
 bool is_fullscreen = false;
@@ -45,6 +47,7 @@ typedef enum Particle {
 } Particle;
 
 uint32_t particle_grid[DEFAULT_WINDOW_HEIGHT][DEFAULT_WINDOW_WIDTH];
+uint32_t particle_grid_saved[DEFAULT_WINDOW_HEIGHT][DEFAULT_WINDOW_WIDTH];
 
 void swap_cell(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1) {
     int temp = particle_grid[y0][x0];
@@ -58,8 +61,16 @@ void init_grid() {
             particle_grid[j][i] = EMPTY;
             int dx = i - DEFAULT_WINDOW_WIDTH / 2;
             int dy = j - DEFAULT_WINDOW_HEIGHT / 2;
-            if(dx * dx + dy * dy < 1600) particle_grid[j][i] = (j < DEFAULT_WINDOW_HEIGHT / 2) ? SAND : WATER;
+            // if(dx * dx + dy * dy < 1600) particle_grid[j][i] = SAND;
+            // if(dx * dx + dy * dy < 1600) particle_grid[j][i] = (j < DEFAULT_WINDOW_HEIGHT / 2) ? SAND : WATER;
+            if(dx < 160 && dx > -160 && dy < 160 && dy > -160) particle_grid[j][i] = (j < DEFAULT_WINDOW_HEIGHT / 2) ? SAND : WATER;
         }
+    }
+}
+
+void copy_grid(uint32_t *grid_dest, uint32_t *grid_src) {
+    for (size_t i = 0; i < DEFAULT_WINDOW_WIDTH * DEFAULT_WINDOW_HEIGHT; i++) {
+        grid_dest[i] = grid_src[i];
     }
 }
 
@@ -135,8 +146,10 @@ void update_particle(size_t c, size_t r) {
 
 /* Update everything in simulation */
 void update() {
-        for (size_t j = 0; j < DEFAULT_WINDOW_HEIGHT; j++) {
+    // for (int j = DEFAULT_WINDOW_HEIGHT - 1; j >= 0; j--) {
+    //     for (int i = DEFAULT_WINDOW_WIDTH - 1; i >= 0; i--) {
     for (size_t i = 0; i < DEFAULT_WINDOW_WIDTH; i++) {
+        for (size_t j = 0; j < DEFAULT_WINDOW_HEIGHT; j++) {
             update_particle(i, j);
         }
     }
@@ -148,14 +161,18 @@ void restart() {
 }
 
 void pause() {
-    if (mode == PAUSED) mode = RENDERING;
-    else if (mode == RENDERING) mode = PAUSED;
+    if (mode == PAUSED) mode = PLAYING;
+    else if (mode == PLAYING) mode = PAUSED;
 }
 
 void step() {
     mode = PAUSED;
     update();
     render_frame();
+}
+
+void save() {
+    copy_grid((uint32_t*)particle_grid_saved, (uint32_t*)particle_grid);
 }
 
 int main() {

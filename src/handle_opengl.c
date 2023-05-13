@@ -15,7 +15,8 @@
 #include "simulation.h"
 
 // State (should not be in this file)
-bool fullscreen = false, just_fullscreened = false, just_refreshed = false, just_paused = false, just_stepped = false;
+bool fullscreen = false;
+bool just_fullscreened = false, just_refreshed = false, just_paused = false, just_stepped = false, just_saved = false;
 int prev_width, prev_height, prev_x, prev_y;
 
 // Shaders
@@ -262,6 +263,12 @@ void take_user_input() {
             just_stepped = true;
         }
     } else just_stepped = false;
+    if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        if(!just_saved) {
+            save();
+            just_saved = true;
+        }
+    } else just_saved = false;
     if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         if(!just_refreshed) {
             restart();
