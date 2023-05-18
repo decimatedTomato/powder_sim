@@ -22,6 +22,9 @@
 // #define DEFAULT_WINDOW_WIDTH 640
 // #define DEFAULT_WINDOW_HEIGHT 480
 
+#define GRID_WIDTH 50
+#define GRID_HEIGHT 50
+
 #define VERTEX_SHADER_FILE_PATH "res/shaders/vertex_old.glsl"
 #define SHADER_FILE_PATH "res/shaders/fragment_old.glsl"
 
@@ -46,30 +49,43 @@ typedef enum Particle {
     SMOKE = 0xFF202020
 } Particle;
 
-uint32_t particle_grid[DEFAULT_WINDOW_HEIGHT][DEFAULT_WINDOW_WIDTH];
-uint32_t particle_grid_saved[DEFAULT_WINDOW_HEIGHT][DEFAULT_WINDOW_WIDTH];
+uint32_t grid1[GRID_HEIGHT][GRID_WIDTH];
+uint32_t grid2[GRID_HEIGHT][GRID_WIDTH];
+
+uint32_t (*grid_current)[GRID_HEIGHT][GRID_WIDTH] = &grid1;
+#define current_grid (*grid_current)
+uint32_t (*grid_next)[GRID_HEIGHT][GRID_WIDTH] = &grid2;
+#define next_grid (*grid_next)
+
+uint32_t grid_saved[GRID_HEIGHT][GRID_WIDTH];
 
 void swap_cell(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1) {
-    int temp = particle_grid[y0][x0];
-    particle_grid[y0][x0] = particle_grid[y1][x1];
-    particle_grid[y1][x1] = temp;
+    int temp = current_grid[y0][x0];
+    current_grid[y0][x0] = current_grid[y1][x1];
+    current_grid[y1][x1] = temp;
 }
 
+// /* Changes the */
+// void swap_grids() {
+//     grid_current = next_grid;
+//     grid_next    = (*grid_next == grid1) ? &grid2 : &grid1;
+// }
+
 void init_grid() {
-    for (size_t j = 0; j < DEFAULT_WINDOW_HEIGHT; j++) {
-        for (size_t i = 0; i < DEFAULT_WINDOW_WIDTH; i++) {
-            particle_grid[j][i] = EMPTY;
-            int dx = i - DEFAULT_WINDOW_WIDTH / 2;
-            int dy = j - DEFAULT_WINDOW_HEIGHT / 2;
+    for (size_t j = 0; j < GRID_HEIGHT; j++) {
+        for (size_t i = 0; i < GRID_WIDTH; i++) {
+            current_grid[j][i] = EMPTY;
+            int dx = i - GRID_WIDTH / 2;
+            int dy = j - GRID_HEIGHT / 2;
             // if(dx * dx + dy * dy < 1600) particle_grid[j][i] = SAND;
-            // if(dx * dx + dy * dy < 1600) particle_grid[j][i] = (j < DEFAULT_WINDOW_HEIGHT / 2) ? SAND : WATER;
-            if(dx < 160 && dx > -160 && dy < 160 && dy > -160) particle_grid[j][i] = (j < DEFAULT_WINDOW_HEIGHT / 2) ? SAND : WATER;
+            if(dx * dx + dy * dy <= GRID_HEIGHT * GRID_HEIGHT / 10) current_grid[j][i] = (j < GRID_HEIGHT / 2) ? SAND : WATER;
+            // if(dx < 160 && dx > -160 && dy < 160 && dy > -160) particle_grid[j][i] = (j < GRID_HEIGHT / 2) ? SAND : WATER;
         }
     }
 }
 
 void copy_grid(uint32_t *grid_dest, uint32_t *grid_src) {
-    for (size_t i = 0; i < DEFAULT_WINDOW_WIDTH * DEFAULT_WINDOW_HEIGHT; i++) {
+    for (size_t i = 0; i < GRID_WIDTH * GRID_HEIGHT; i++) {
         grid_dest[i] = grid_src[i];
     }
 }
@@ -106,39 +122,45 @@ void init_texture() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
     glActiveTexture(GL_TEXTURE0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, particle_grid);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GRID_WIDTH, GRID_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, current_grid);
 }
 
+void update_sand(unsigned int x, unsigned int y) {
+    if (y <= 0) return;
+    if (current_grid[y-1][x] == EMPTY) {                               // Down
+        swap_cell(x, y, x, y - 1);
+    } else if (x > 0 && current_grid[y-1][x-1] == EMPTY) {             // Down left
+        swap_cell(x, y, x - 1, y - 1);
+    } else if (x < GRID_WIDTH && current_grid[y-1][x+1] == EMPTY) {    // Down right
+        swap_cell(x, y, x + 1, y - 1);
+    }
+}
+
+void update_water(unsigned int x, unsigned int y) {
+    if (y <= 0) return;
+    if (current_grid[y-1][x] == EMPTY) {                                       // Down
+        swap_cell(x, y, x, y - 1);
+    } else if (x < GRID_WIDTH && current_grid[y-1][x+1] == EMPTY) {  // Down right
+        swap_cell(x, y, x + 1, y - 1);
+    } else if (x > 0 && current_grid[y - 1][x - 1] == EMPTY) {                 // Down left
+        swap_cell(x, y, x - 1, y - 1);
+    } else if (x < GRID_WIDTH && current_grid[y][x+1] == EMPTY) {    // Right
+        swap_cell(x, y, x + 1, y);
+    } else if (x > 0 && current_grid[y][x-1] == EMPTY) {                       // Left
+        swap_cell(x, y, x - 1, y);
+    }
+}
+
+
 /* Updates a singular particle based on its type rules */
-void update_particle(size_t c, size_t r) {
-    switch (particle_grid[r][c]) {
+void update_particle(unsigned int c, unsigned int r) {
+    switch (current_grid[r][c]) {
         case EMPTY:
             break;
         case SAND:
-            // FALL
-            if (r <= 0) break;
-            if (particle_grid[r-1][c] == EMPTY) {                                       // Down
-                swap_cell(c, r, c, r - 1);
-            } else if (c > 0 && particle_grid[r-1][c-1] == EMPTY) {                     // Down left
-                swap_cell(c, r, c - 1, r - 1);
-            } else if (c < DEFAULT_WINDOW_WIDTH && particle_grid[r-1][c+1] == EMPTY) {  // Down right
-                swap_cell(c, r, c + 1, r - 1);
-            }
-           break;
+            update_sand(c, r); break;
         case WATER:
-            if (r <= 0) break;
-            if (particle_grid[r-1][c] == EMPTY) {                                       // Down
-                swap_cell(c, r, c, r - 1);
-            } else if (c < DEFAULT_WINDOW_WIDTH && particle_grid[r-1][c+1] == EMPTY) {  // Down right
-                swap_cell(c, r, c + 1, r - 1);
-            } else if (c > 0 && particle_grid[r - 1][c - 1] == EMPTY) {                 // Down left
-                swap_cell(c, r, c - 1, r - 1);
-            } else if (c < DEFAULT_WINDOW_WIDTH && particle_grid[r][c+1] == EMPTY) {    // Right
-                swap_cell(c, r, c + 1, r);
-            } else if (c > 0 && particle_grid[r][c-1] == EMPTY) {                       // Left
-                swap_cell(c, r, c - 1, r);
-            }
-            break;
+            update_water(c, r); break;
         case SMOKE:
             break;
     }
@@ -146,18 +168,19 @@ void update_particle(size_t c, size_t r) {
 
 /* Update everything in simulation */
 void update() {
-    // for (int j = DEFAULT_WINDOW_HEIGHT - 1; j >= 0; j--) {
-    //     for (int i = DEFAULT_WINDOW_WIDTH - 1; i >= 0; i--) {
-    for (size_t i = 0; i < DEFAULT_WINDOW_WIDTH; i++) {
-        for (size_t j = 0; j < DEFAULT_WINDOW_HEIGHT; j++) {
+    // for (int j = GRID_HEIGHT - 1; j >= 0; j--) {
+    //     for (int i = GRID_WIDTH - 1; i >= 0; i--) {
+    for (unsigned int i = 0; i < GRID_WIDTH; i++) {
+        for (unsigned int j = 0; j < GRID_HEIGHT; j++) {
             update_particle(i, j);
         }
     }
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, particle_grid);
+    // swap_grids();
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GRID_WIDTH, GRID_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, current_grid);
 }
 
 void load() {
-    copy_grid((uint32_t*)particle_grid, (uint32_t*)particle_grid_saved);
+    copy_grid((uint32_t*)current_grid, (uint32_t*)grid_saved);
     render_frame();
 }
 
@@ -173,7 +196,7 @@ void step() {
 }
 
 void save() {
-    copy_grid((uint32_t*)particle_grid_saved, (uint32_t*)particle_grid);
+    copy_grid((uint32_t*)grid_saved, (uint32_t*)current_grid);
 }
 
 int main() {
@@ -200,7 +223,6 @@ int main() {
     }
 
     clean_up();
-    // glDeleteTextures(1, ???);
     return 0;
 }
 
