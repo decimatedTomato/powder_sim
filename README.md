@@ -2,12 +2,9 @@
 - `f` fullscreen/windowed mode
 - `p` pause/unpause
 - `.` step 1 update
-- `r` reset to saved state
+- `l` load saved state
+- `s` save current state
 
-## PURPOSE
-Cellular Automata Particle simulation inspired by
-- https://www.youtube.com/watch?v=prXuyMCgbTc&ab_channel=GDC
-- https://dan-ball.jp/en/javagame/dust/
 
 Makes use of:
 - glfw for window context
@@ -45,3 +42,14 @@ Makes use of:
 
 - Add mouse based particle brush
 - Add particle brush type and size input
+
+
+## Inspiration
+Cellular Automata Particle simulation inspired by
+- https://www.youtube.com/watch?v=prXuyMCgbTc&ab_channel=GDC
+- https://dan-ball.jp/en/javagame/dust/
+
+### More
+- https://github.com/GameEngineering/EP01_SandSim/blob/master/source/main.c
+- https://www.youtube.com/watch?v=wZJCQQPaGZI&ab_channel=Winterdev
+- https://www.youtube.com/watch?v=5Ka3tbbT-9E&ab_channel=MARF
