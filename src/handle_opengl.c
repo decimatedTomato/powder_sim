@@ -81,7 +81,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
     printf("\n");
 }
 
-char* readFile(const char* filepath) {
+static char* readFile(const char* filepath) {
 	char* buffer = '\0';
 	long length;
 	FILE* f = fopen(filepath, "r");
@@ -124,8 +124,7 @@ static unsigned int CompileShader(unsigned int type, const char* src) {
     return id;
 }
 
-static unsigned int CreateShader(char* vertexShader, char* fragmentShader)
-{
+static unsigned int CreateShader(char* vertexShader, char* fragmentShader) {
     unsigned int program = glCreateProgram();
     unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
     unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
